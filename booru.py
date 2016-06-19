@@ -3,7 +3,7 @@ import urllib
 import urllib2
 import cStringIO
 from ttk import Frame, Label, Labelframe
-from Tkinter import Tk, Y, Listbox, StringVar, END, LEFT, SUNKEN, NONE, W, Button
+from Tkinter import Tk, Y, Listbox, StringVar, END, LEFT, SUNKEN, NONE, W, Button, Toplevel
 from PIL import Image, ImageTk
 from Queue import Queue
 from threading import Thread
@@ -66,6 +66,31 @@ class Main(Frame):
         self.uploader_v = StringVar()
         self.uploader = Label(self.description, textvariable=self.uploader_v, justify=LEFT, wraplength=500, anchor=W)
         self.uploader.pack()
+        idx = (0,0)
+        try:
+            self.artist_v.set(u"Artist:\t%s" % posts[idx[0]][u"tag_string_artist"])
+        except KeyError:
+            self.artist_v.set(u"Artist:\t")
+        try:
+            self.md5_v.set(u"MD5:\t%s" % posts[idx[0]][u"md5"])
+        except KeyError:
+            self.md5_v.set(u"MD5:\t")
+        try:
+            self.source_v.set(u"Source:\t%s" % posts[idx[0]][u"source"])
+        except KeyError:
+            self.source_v.set(u"Source:\t")
+        try:
+            self.wxh_v.set(u"Size:\t%sx%s" % (posts[idx[0]][u"image_width"], posts[idx[0]][u"image_height"]))
+        except KeyError:
+            self.wxh_v.set(u"Size:\t")
+        try:
+            self.tags_v.set(u"Tags:\t%s" % posts[idx[0]][u"tag_string"])
+        except KeyError:
+            self.tags_v.set(u"Tags:\t")
+        try:
+            self.uploader_v.set(u"Uploader:\t%s" % posts[idx[0]][u"uploader_name"])
+        except KeyError:
+            self.uploader_v.set(u"Uploader:\t")
         def download_image_current():
             def download():
                 urllib.urlretrieve("%s%s" % (main_url, self.current_image[u"file_url"]), "%s_%s.%s" % (self.current_image[u"id"], self.current_image[u"md5"], self.current_image[u"file_ext"]))
@@ -73,6 +98,16 @@ class Main(Frame):
             t1.start()
         self.download_button = Button(self, text="Download", command=download_image_current)
         self.download_button.pack()
+        def bigger_preview():
+            self.bigpreview = Toplevel(self)
+            image = Image.open(get_image_from_internet_binary(u"%s%s" % (main_url, self.current_image[u"file_url"])))
+            photo = ImageTk.PhotoImage(image)
+            labelu = Label(self.bigpreview, image=photo)
+            labelu.image = photo
+            labelu.pack(fill=Y, expand=0, side=LEFT)
+        self.preview_button = Button(self, text="Preview", command=bigger_preview)
+        self.preview_button.pack()
+
 
 
     def onSelect(self, val):
