@@ -5,7 +5,7 @@ import cStringIO
 import glob
 import os
 from ttk import Frame, Label, Labelframe
-from Tkinter import Tk, Y, Listbox, StringVar, END, LEFT, SUNKEN, NONE, W, Button, Toplevel, BOTTOM, RIGHT, BOTH, TOP, Menubutton, RAISED, Menu
+from Tkinter import Tk, Y, Listbox, StringVar, END, LEFT, SUNKEN, NONE, W, Button, Toplevel, BOTTOM, RIGHT, BOTH, TOP, Menubutton, RAISED, Menu, IntVar
 from PIL import Image, ImageTk
 from Queue import Queue
 from threading import Thread
@@ -15,7 +15,9 @@ from threading import Thread
 #TODO Sync database and HDD
 #TODO Database view
 
-main_url = "https://danbooru.donmai.us/"
+urls = ["https://danbooru.donmai.us/", "https://safebooru.donmai.us/"]
+
+main_url = urls[1]
 
 def get_posts(file, query_dict):
     data = urllib.urlencode(query_dict)
@@ -41,12 +43,14 @@ class Main(Frame):
     def initUI(self):
         self.parent.title("Booru")
         self.pack(fill=Y, expand=0, side=LEFT)
+        myicon = ImageTk.PhotoImage(file="sbooru.ico")
         self.current_booru_var = StringVar()
-        self.mb =  Menubutton(self, textvariable=self.current_booru_var, relief=RAISED)
+        self.mb =  Menubutton(self, textvariable=self.current_booru_var, relief=RAISED, image=myicon, compound=LEFT)
+        self.mb.image = myicon
         self.mb.pack(side=TOP)
         self.mb.menu = Menu(self.mb, tearoff = 0)
         self.mb["menu"] = self.mb.menu 
-        self.current_booru_var.set("Danbooru")
+        self.current_booru_var.set("Safebooru")
 
         def change_booru(booru):
             self.current_booru = booru
@@ -54,13 +58,9 @@ class Main(Frame):
                 self.current_booru_var.set("Danbooru")
             if self.current_booru == 1:
                 self.current_booru_var.set("Safebooru")
-            if self.current_booru == 1:
-                self.current_booru_var.set("Gelbooru")
-            #print(self.current_booru)
             
         self.mb.menu.add_command(label="Danbooru", command=lambda : change_booru(0))
         self.mb.menu.add_command(label="Safebooru", command=lambda : change_booru(1))
-        self.mb.menu.add_command(label="Gelbooru", command=lambda : change_booru(2))
 
         self.mb.pack()
 
@@ -68,7 +68,7 @@ class Main(Frame):
         photo = ImageTk.PhotoImage(image)
         self.label = Label(self, image=photo)
         self.label.image = photo
-        self.label.pack(fill=Y, expand=0, side=LEFT)
+        self.label.pack(fill=Y, expand=0, side=TOP)
 
         self.lb = Listbox(self)
         for i in self.posts:
@@ -76,31 +76,31 @@ class Main(Frame):
         self.lb.bind("<<ListboxSelect>>", self.onSelect)
         self.lb.pack(pady=15, fill=Y, expand=0, side=LEFT)
 
-        self.description = Labelframe(self, text="Description")
-        self.description.pack(pady=15, fill=Y)
+        self.description = Labelframe(self, text="Description", height=350, width=350)
+        self.description.pack(pady=15, expand=0)
         #artist
         self.artist_v = StringVar()
-        self.artist = Label(self.description, textvariable=self.artist_v, justify=LEFT, wraplength=500, anchor=W)
+        self.artist = Label(self.description, textvariable=self.artist_v, justify=LEFT, wraplength=350, anchor=W)
         self.artist.pack()
         #md5
         self.md5_v = StringVar()
-        self.md5 = Label(self.description, textvariable=self.md5_v, justify=LEFT, wraplength=500, anchor=W)
+        self.md5 = Label(self.description, textvariable=self.md5_v, justify=LEFT, wraplength=350, anchor=W)
         self.md5.pack()
         #source
         self.source_v = StringVar()
-        self.source = Label(self.description, textvariable=self.source_v, justify=LEFT, wraplength=500, anchor=W)
+        self.source = Label(self.description, textvariable=self.source_v, justify=LEFT, wraplength=350, anchor=W)
         self.source.pack()
         #wxh
         self.wxh_v = StringVar()
-        self.wxh = Label(self.description, textvariable=self.wxh_v, justify=LEFT, wraplength=500, anchor=W)
+        self.wxh = Label(self.description, textvariable=self.wxh_v, justify=LEFT, wraplength=350, anchor=W)
         self.wxh.pack()
         #tags (for now all)
         self.tags_v = StringVar()
-        self.tags = Label(self.description, textvariable=self.tags_v, justify=LEFT, wraplength=500, anchor=W)
+        self.tags = Label(self.description, textvariable=self.tags_v, justify=LEFT, wraplength=350, anchor=W)
         self.tags.pack()
         #uploader
         self.uploader_v = StringVar()
-        self.uploader = Label(self.description, textvariable=self.uploader_v, justify=LEFT, wraplength=500, anchor=W)
+        self.uploader = Label(self.description, textvariable=self.uploader_v, justify=LEFT, wraplength=350, anchor=W)
         self.uploader.pack()
         idx = (0,0)
         try:
@@ -139,9 +139,9 @@ class Main(Frame):
         self.download_button = Button(self.button_frame, text="Download", command=download_image_current)
         self.download_button.pack(side=LEFT)
         def bigger_preview():
-            self.bigpreview = Toplevel(self)
             image = Image.open(get_image_from_internet_binary(u"%s%s" % (main_url, self.current_image[u"file_url"])))
             photo = ImageTk.PhotoImage(image)
+            self.bigpreview = Toplevel(self)
             labelu = Label(self.bigpreview, image=photo)
             labelu.image = photo
             labelu.pack(fill=Y, expand=0, side=LEFT)
@@ -149,6 +149,7 @@ class Main(Frame):
         self.preview_button.pack(side=RIGHT)
         def onRefresh():
             def method():
+                query_args["page"] = self.current_page.get()
                 self.posts = get_posts("posts.json", query_args)
                 self.lb.delete(0, END)
                 for i in self.posts:
@@ -157,17 +158,23 @@ class Main(Frame):
             t1.start()
         self.refresh = Button(self.button_frame, text="Refresh posts", command=onRefresh)
         self.refresh.pack(side=LEFT)
-        """self.file_browser = Listbox(self)
-        files_in_download = glob.glob(os.path.join("download", "*.jpg"))
-        files_in_download += glob.glob(os.path.join("download", "*.png"))
-        files_in_download += glob.glob(os.path.join("download", "*.gif"))
-        if files_in_download == [[], []]:
-            files_in_download = []
-        for i in files_in_download:
-            self.file_browser.insert(END, i)
-        self.file_browser.bind("<<ListboxSelect>>", self.onSelectFileBrowser)
-        self.file_browser.pack(fill=Y, expand=0, side=BOTTOM)"""
 
+        page_control = Frame(self)
+        page_control.pack(pady=15, side=BOTTOM)
+        self.current_page = IntVar()
+        self.current_page.set(1)
+        def forward_f():
+            self.current_page.set(self.current_page.get()+1)
+            onRefresh()
+        forward = Button(page_control, text=">>", command=forward_f)
+        forward.pack(side=RIGHT)
+        def backward_f():
+            self.current_page.set((self.current_page.get()-1) if (self.current_page.get()-1 > 0) else self.current_page.get())
+            onRefresh()
+        backward = Button(page_control, text="<<", command=backward_f)
+        backward.pack(side=LEFT)
+        curpaglabl = Label(page_control, textvariable=self.current_page, background="orange")
+        curpaglabl.pack(pady=15, side=BOTTOM)
 
     def onSelectFileBrowser(self, val):
         sender = val.widget
@@ -185,12 +192,6 @@ class Main(Frame):
         sender = val.widget
         idx = sender.curselection()
         self.current_image = self.posts[idx[0]]
-        """
-        image = Image.open(get_image_from_internet_binary(u"%s%s" % (main_url, posts[idx[0]][u"preview_file_url"])))
-        photo = ImageTk.PhotoImage(image)
-        self.label.configure(image=photo)
-        self.label.image = photo
-        """
         try:
             self.artist_v.set(u"Artist:\t%s" % self.posts[idx[0]][u"tag_string_artist"])
         except KeyError:
@@ -226,7 +227,8 @@ class Main(Frame):
 def main():
     root = Tk()
     wMain = Main(root)
-    root.geometry()
+    root.geometry("480x640+300+300")
+    root.iconbitmap('sbooru.ico')
     root.mainloop()
 
 if __name__ == '__main__':
